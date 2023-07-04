@@ -19,6 +19,7 @@ contestInfos = [] # 比赛信息的列表，一个元素就是一天的查询结
 # 加入网站后在字典中加入相应的键值对
 contestHunters = {
     "codeforces": contest_hunter.CodeforcesHunter(),
+    "atcoder": contest_hunter.AtcoderHunter(),
 }
 
 # 定时任务，每天早上执行一次，获取比赛信息
@@ -38,4 +39,4 @@ def index():
     return jsonify(contestInfos[-1])
 
 if __name__ == "__main__":
-    app.run(port=8000)
+    app.run(host="0.0.0.0", port=8000, debug=True)
