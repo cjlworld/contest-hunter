@@ -21,6 +21,7 @@ class ContestHunter:
             response.encoding = 'utf-8'
             return response.text
         except:
+            print("failed")
             return ""
     
     # 转换时区
@@ -64,13 +65,13 @@ class CodeforcesHunter(ContestHunter):
             # print(contestDateTime)
 
             # 转换时区
-            contestDateTime = self.convert_timezone(contestDateTime, 'Europe/Moscow', 'Asia/Shanghai')
+            contestDateTime = self.convert_timezone(contestDateTime, 'Etc/GMT-3', 'Etc/GMT-8')
             # 加入
             contestInfo["time"] = str(contestDateTime)
 
             result.append(contestInfo)
         
-        return {"platform": "codeforces", "contests": result}
+        return {"platform": self.platform, "contests": result}
 
 class AtcoderHunter(ContestHunter):
     url = "https://atcoder.jp/contests/"
@@ -90,7 +91,7 @@ class AtcoderHunter(ContestHunter):
             startTime = startTime.strip().split("+")[0]
             # print(startTime)
             contestDateTime = datetime.strptime(startTime, "%Y-%m-%d %H:%M:%S") # 注意两个参数别反了
-            contestDateTime = self.convert_timezone(contestDateTime, 'Asia/Tokyo', 'Asia/Shanghai')
+            contestDateTime = self.convert_timezone(contestDateTime, 'Etc/GMT-9', 'Etc/GMT-8')
 
             # 比赛标题
             title = contest.find("a", attrs={"href": re.compile("/contests/[\w]+")}).string
@@ -112,8 +113,48 @@ class AtcoderHunter(ContestHunter):
 
             result.append(contestInfo)
 
-        return result
+        return {"platform": self.platform, "contests": result}
+
+class AcwingHunter(ContestHunter):
+    url = "https://www.acwing.com/activity/1/competition/"
+    platform = "acwing"
+
+    def hunt(self):
+        result = []
+        html = self.GetHtmlText(self.url).replace('<br />', '\n').replace('</p>', '\n')
+        soup = BeautifulSoup(html, "html.parser")
+
+        for contest in soup.find_all("div", attrs={"class": "activity-index-block"}):
+            statusTag = contest.find("span", attrs={"class": "btn btn-warning activity_status"})
+
+            if statusTag is None: # 比赛已结束
+                continue
+            
+            # 开始时间
+            startTimeTag = contest.find_all("span", attrs={"class": "activity_td"})[-1]
+            startTime = startTimeTag.string
+
+            # 比赛标题
+            titleTag = contest.find("span", attrs={"class": "activity_title"})
+            title = titleTag.string
+
+            contestInfo = {
+                "time": startTime,
+                "title": title,
+            }
+
+            result.append(contestInfo)
+
+        return {"platform": self.platform, "contests": result}
+
+# 由爬取网站对象组成的字典（更新程序调用 hunt() 方法获取信息）
+# 加入网站后在字典中加入相应的键值对
+contestHunters = {
+    "codeforces": CodeforcesHunter(),
+    "atcoder": AtcoderHunter(),
+    "acwing": AcwingHunter(),
+}
 
 if __name__ == "__main__":
-    result = AtcoderHunter().hunt()
-    print(*result, sep="\n")
+    result = AcwingHunter().hunt()
+    print(result, sep="\n")
