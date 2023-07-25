@@ -22,3 +22,9 @@ class Contest(db.Model):
             "id": self.id,
             "date": self.date,
         }
+
+class DailyReportModel(db.Model):
+    __tablename__ = 'daily_report'
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.String(128))
+    jsons = db.Column(db.String(1024))

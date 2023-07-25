@@ -4,8 +4,8 @@ from flask import jsonify, request
 from . import schedulers
 from . import api
 from .. import db
-from ..models import Contest
-from datetime import datetime
+from ..models import Contest, DailyReportModel
+from datetime import datetime, date
 import json
 
 """
@@ -29,8 +29,11 @@ class DailyReportResource(Resource):
     """
     def get(self):
         schedulers.get_contest_info()
-        results = list(map(lambda x: x.serialize(), Contest.query.all()))
-        return jsonify(results)
+        # results = list(map(lambda x: x.serialize(), Contest.query.all()))
+        # return jsonify(results)
+        print(str(date.today()))
+        result = DailyReportModel.query.filter_by(date=str(date.today())).first()
+        return json.loads(result.jsons)
 
 @api.resource("/contest_by_day")
 class ContestByDayResource(Resource):
@@ -50,8 +53,6 @@ class ContestByDayResource(Resource):
             return {"status_code": "0", "data": None}
         
         result_contests = Contest.query.filter_by(date=request_date_str).order_by(Contest.time).all()
-        print(len(result_contests))
         result = [x.serialize() for x in result_contests]
-        print(result)
         return {"status_code": "1", "data": result}
 
