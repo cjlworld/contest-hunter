@@ -1,7 +1,7 @@
 from flask import Blueprint
-
-contestInfos = [] # 比赛信息的列表，一个元素就是一天的查询结果
+from flask_restful import Api
 
 api_bp = Blueprint('api_blueprint', __name__)
+api = Api(api_bp)
 
-from . import schedulers, views
+from . import schedulers, views, contest_hunter

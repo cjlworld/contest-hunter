@@ -1,0 +1,2 @@
+GET http://localhost:8000/daily_report
+content-type: application/json
