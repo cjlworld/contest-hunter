@@ -2,5 +2,5 @@ GET http://localhost:8000/contest_by_day
 content-type: application/json
 
 {
-    "date": "2023-07-25"
+    "date": "2023-07-29"
 }

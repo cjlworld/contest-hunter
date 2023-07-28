@@ -32,7 +32,9 @@ class DailyReportResource(Resource):
         # results = list(map(lambda x: x.serialize(), Contest.query.all()))
         # return jsonify(results)
         print(str(date.today()))
-        result = DailyReportModel.query.filter_by(date=str(date.today())).first()
+        result: DailyReportModel | None = DailyReportModel.query.filter_by(date=str(date.today())).first()
+        if result is None:
+            return {"status_code": "0", "data": None}
         return json.loads(result.jsons)
 
 @api.resource("/contest_by_day")
@@ -42,7 +44,7 @@ class ContestByDayResource(Resource):
         GET             date = yyyy-mm-dd 
     """
     def get(self):
-        request_json = json.loads(request.data.decode("utf-8"))
+        request_json : dict | None = json.loads(request.data.decode("utf-8"))
         try: 
             request_date_str = str(request_json["date"])
             # 要把 format 写在后面
@@ -52,7 +54,9 @@ class ContestByDayResource(Resource):
             print("Error: ", err)
             return {"status_code": "0", "data": None}
         
-        result_contests = Contest.query.filter_by(date=request_date_str).order_by(Contest.time).all()
-        result = [x.serialize() for x in result_contests]
+        result_contests: list[Contest] | None = Contest.query.filter_by(date=request_date_str).order_by(Contest.time).all()
+        if result_contests is None:
+            return {"status_code": "1", "data": None}
+        result: list[dict] = [x.serialize() for x in result_contests]
         return {"status_code": "1", "data": result}
 
