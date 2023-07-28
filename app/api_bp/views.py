@@ -46,9 +46,9 @@ class ContestByDayResource(Resource):
         GET             date = yyyy-mm-dd 
     """
     def get(self):
-        request_json : dict | None = json.loads(request.data.decode("utf-8"))
+        request_json : dict = json.loads(request.data.decode("utf-8"))
         try: 
-            request_date_str = str(request_json["date"])
+            request_date_str = str(request_json.get("date"))
             # 要把 format 写在后面
             # 真的是反人类的设计
             _ = datetime.strptime(request_date_str, "%Y-%m-%d")

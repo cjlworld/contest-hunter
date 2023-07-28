@@ -1,7 +1,7 @@
 import re
 import requests
 from datetime import datetime
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from pytz import timezone
 
 """
@@ -14,11 +14,11 @@ from pytz import timezone
 class ContestHunter:
     url = ""
     platform = ""
-    headers = { # header 伪装
+    headers: dict[str, str] = { # header 伪装
     }
 
     # 封装好的爬取页面的方法
-    def get_html_text(self, url: str):
+    def get_html_text(self, url: str) -> str:
         try:
             # 等待 30s，再不相应算超时
             response = requests.get(url, timeout=30, headers=self.headers)
@@ -34,8 +34,8 @@ class ContestHunter:
         return Atime.replace(tzinfo=timezone(Aplace)).astimezone(timezone(Bplace))
 
     # 获取比赛信息，由 子类实现
-    def hunt(self):
-        pass
+    def hunt(self) -> list:
+        return []
 
 # Codeforces
 class CodeforcesHunter(ContestHunter):
@@ -87,7 +87,12 @@ class AtcoderHunter(ContestHunter):
         soup = BeautifulSoup(html, "html.parser")
 
         contest_table = soup.find("div", attrs={"id": "contest-table-upcoming"})
+        if contest_table is None:
+            raise ValueError('A very specific bad thing happened.')
         contest_table_tbody = contest_table.find("tbody") # 表单
+        if type(contest_table_tbody) is not Tag:
+            raise ValueError('A very specific bad thing happened.')
+        
         for contest in contest_table_tbody.find_all("tr"):
             # 开始时间，是日本的时间 "2023-07-08 21:00:00+0900"
             start_time_tag = contest.find("td", attrs={"class": "text-center"})
@@ -161,11 +166,23 @@ contest_hunter_dict = {
     "acwing": AcwingHunter(),
 }
 
-def hunt_all():
+def hunt_all() -> list | None:
+    """
+    失败返回 None
+    """
     results = []
-    for key, val in contest_hunter_dict.items():
-        results.extend(val.hunt())
+    try:
+        for key, val in contest_hunter_dict.items():
+            results.extend(val.hunt())
+    except Exception as err:
+        print(err)
+        return None
+    
     return results
 
 if __name__ == "__main__":
-    print(*hunt_all(), sep='\n')
+    results = hunt_all()
+    if results is not None:
+        print(*results, sep='\n')
+    else:
+        print("failed")
