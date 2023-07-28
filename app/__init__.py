@@ -31,7 +31,6 @@ def create_app(config):
     """ 初始化表 """
     from .models import Contest
     with app.app_context():
-        db.drop_all()
         db.create_all()
 
     return app

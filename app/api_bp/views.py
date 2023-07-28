@@ -1,6 +1,8 @@
 from flask_restful import Resource
 from flask import jsonify, request
 
+import typing
+
 from . import schedulers
 from . import api
 from .. import db
@@ -21,7 +23,7 @@ PATCH（UPDATE）：在服务器更新资源（客户端提供需要修改的资
 DELETE（DELETE）：从服务器删除资源。
 """
 
-@api.resource("/daily_report")
+@api.resource("/daily-report")
 class DailyReportResource(Resource):
     """
         daily_report 接口，将日报视为资源
@@ -31,13 +33,13 @@ class DailyReportResource(Resource):
         schedulers.get_contest_info()
         # results = list(map(lambda x: x.serialize(), Contest.query.all()))
         # return jsonify(results)
-        print(str(date.today()))
+        # print(str(date.today()))
         result: DailyReportModel | None = DailyReportModel.query.filter_by(date=str(date.today())).first()
         if result is None:
             return {"status_code": "0", "data": None}
-        return json.loads(result.jsons)
+        return {"status_code": "1", "data": json.loads(result.jsons)}
 
-@api.resource("/contest_by_day")
+@api.resource("/contest-by-day")
 class ContestByDayResource(Resource):
     """
         contest_by_day 接口，将每天的比赛信息视为资源
