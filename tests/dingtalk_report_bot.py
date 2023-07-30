@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import traceback
 import datetime
 from dingtalkchatbot.chatbot import DingtalkChatbot
 
@@ -38,6 +39,7 @@ def get_report() -> str:
             raise Exception("status_code: 0")
     except Exception as err:
         print(err)
+        traceback.print_exc()
         return "**全网比赛日报出错，请尽快检修！**"
 
     contests: list[dict[str, str]] = response_json.get("data")
