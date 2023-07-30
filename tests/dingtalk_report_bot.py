@@ -2,7 +2,6 @@ import os
 import json
 import requests
 import datetime
-from functools import cmp_to_key
 from dingtalkchatbot.chatbot import DingtalkChatbot
 
 # 将打卡结果发送到 Dingding
@@ -57,7 +56,7 @@ def get_report() -> str:
         
         text += "***\n"
     text = text.rstrip("***\n")
-    return text
+    # return text
 
 if __name__ == "__main__":
     text: str = get_report()

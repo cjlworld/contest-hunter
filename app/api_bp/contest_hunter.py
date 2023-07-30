@@ -1,6 +1,7 @@
 import re
 import requests
-from datetime import datetime
+import traceback
+from datetime import datetime, timedelta
 from bs4 import BeautifulSoup, Tag
 from pytz import timezone
 
@@ -114,8 +115,8 @@ class AtcoderHunter(ContestHunter):
             rating = ratingTag.string
 
             contest_info = {
-                "time": str(contest_datetime), 
                 "title": title,
+                "time": str(contest_datetime), 
                 "length": time_length,
                 "rating": rating,    
                 "platform": self.platform,
@@ -149,8 +150,8 @@ class AcwingHunter(ContestHunter):
             title = title_tag.string
 
             contest_info = {
+                "title": "Acwing " + title,
                 "time": start_time,
-                "title": title,
                 "platform": self.platform,
             }
 
@@ -158,12 +159,56 @@ class AcwingHunter(ContestHunter):
 
         return result
 
+class NowCoderHunter(ContestHunter):
+    url = "https://ac.nowcoder.com/acm/contest/vip-index?topCategoryFilter="
+    url_1 = url + "13"
+    url_2 = url + "14"
+
+    platform = "nowcoder"
+
+    def hunt_page(self, url: str) -> list:
+        result: list[dict[str, str]] = []
+        html = self.get_html_text(url=url).replace('<br />', '\n').replace('</p>', '\n')
+        soup = BeautifulSoup(html, "html.parser")
+
+        for contest_tag in soup.find_all("div", attrs={"class": "platform-item-cont"}):
+            if contest_tag.find("span", attrs={"class": "match-status match-end-tag"}) is not None:
+                continue
+            
+            contest_info = {}
+            # breakpoint()
+            contest_title_tag = contest_tag.find("a", attrs={"href": re.compile("/acm/contest/[\w]+")})
+            contest_info["title"] = contest_title_tag.string
+
+            contest_time_tag = contest_tag.find("li", attrs={"class": "match-time-icon"})
+
+            contest_time_str = contest_time_tag.string.split("(")[0]
+            print(contest_time_str.lstrip("比赛时间： ").split(" 至 "))
+            start_time, end_time = map(lambda x: datetime.strptime(x.strip(), "%Y-%m-%d %H:%M"), 
+                                       contest_time_str.lstrip("比赛时间： ").split(" 至 "))
+            contest_info["time"] = str(start_time)
+
+            contest_length = end_time - start_time
+            contest_info["length"] = str(contest_length)
+
+            contest_info["platform"] = self.platform
+            result.append(contest_info)
+
+        return result
+
+    def hunt(self) -> list:
+        result: list[dict[str, str]] = []
+        result.extend(self.hunt_page(self.url_1))
+        result.extend(self.hunt_page(self.url_2))
+        return result
+        
 # 由爬取网站对象组成的字典（更新程序调用 hunt() 方法获取信息）
 # 加入网站后在字典中加入相应的键值对
 contest_hunter_dict = {
     "codeforces": CodeforcesHunter(),
     "atcoder": AtcoderHunter(),
     "acwing": AcwingHunter(),
+    "nowcoder": NowCoderHunter(),
 }
 
 def hunt_all() -> list | None:
@@ -175,7 +220,7 @@ def hunt_all() -> list | None:
         for key, val in contest_hunter_dict.items():
             results.extend(val.hunt())
     except Exception as err:
-        print(err)
+        traceback.print_exc()
         return None
     
     return results
