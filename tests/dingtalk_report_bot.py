@@ -43,7 +43,7 @@ def get_report() -> str:
     contests: list[dict[str, str]] = response_json.get("data")
 
     text = "## 全网比赛日报 " + str(datetime.date.today()) + "\n\n***\n"
-    contests.sort(key=(lambda x: x.get("time", "").split(" ")[0]))
+    contests.sort(key=(lambda x: x.get("time", "")))
     for contest in contests:
         text += contest.get("title", "")
         text += "\n\n"
