@@ -56,7 +56,7 @@ def get_report() -> str:
         
         text += "***\n"
     text = text.rstrip("***\n")
-    # return text
+    return text
 
 if __name__ == "__main__":
     text: str = get_report()
