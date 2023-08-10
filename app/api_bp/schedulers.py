@@ -26,6 +26,7 @@ def get_contest_info():
         return
     
     daily_report: list[dict] | None = contest_hunter.hunt_all()
+    daily_report.sort(key=(lambda x: x.get('time', '')))
     if daily_report is None:
         return
     results = list(map(transform_dict_to_contest, daily_report))
