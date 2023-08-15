@@ -4,6 +4,7 @@ import traceback
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup, Tag
 from pytz import timezone
+from playwright.sync_api import Playwright, sync_playwright, expect
 
 """
     为了将 contest_hunter 模块和其他模块解耦，
@@ -11,27 +12,49 @@ from pytz import timezone
     由 scheduler 转译为 Contest 类
 """
 
-# ContestHunter 是爬取网站比赛信息的基类，其他爬取具体网站的类继承该类并实现 hunt 方法
-class ContestHunter:
-    url = ""
-    platform = ""
-    headers: dict[str, str] = { # header 伪装
-    }
+# PageHunter 是爬取页面的基类
+class PageCrawler:
+    @classmethod
+    def crawl(cls, url: str) -> str:
+        pass
 
-    # 封装好的爬取页面的方法
-    def get_html_text(self, url: str) -> str:
+class PlayWrightPageCrawler(PageCrawler):
+    @classmethod
+    def crawl(cls, url: str) -> str:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            context = browser.new_context()
+            page = context.new_page()
+            page.goto(url)
+            page.wait_for_load_state("networkidle")
+            return page.content()
+
+class RequestsPageCrawler(PageCrawler):
+    headers: dict[str, str] = { # header
+    }
+    @classmethod
+    def crawl(cls, url: str) -> str:
         try:
             # 等待 30s，再不相应算超时
-            response = requests.get(url, timeout=30, headers=self.headers)
+            response = requests.get(url, timeout=30, headers=cls.headers)
             response.raise_for_status()
             response.encoding = 'utf-8'
             return response.text
         except:
-            print("failed")
+            print("RequestsPageCrawler.crawl failed")
             return ""
+
+# ContestHunter 是爬取网站比赛信息的基类，其他爬取具体网站的类继承该类并实现 hunt 方法
+class ContestHunter:
+    url = ""
+    platform = ""
     
+    def __init__(self, page_crawler: PageCrawler) -> None:
+        self.page_crawler = page_crawler
+
     # 转换时区
-    def convert_timezone(self, Atime: datetime, Aplace: str, Bplace: str) -> datetime:
+    @staticmethod
+    def convert_timezone(Atime: datetime, Aplace: str, Bplace: str) -> datetime:
         return Atime.replace(tzinfo=timezone(Aplace)).astimezone(timezone(Bplace))
 
     # 获取比赛信息，由 子类实现
@@ -45,7 +68,7 @@ class CodeforcesHunter(ContestHunter):
 
     def hunt(self):
         result = []
-        html = self.get_html_text(self.url).replace('<br />', '\n').replace('</p>', '\n')
+        html = self.page_crawler.crawl(self.url).replace('<br />', '\n').replace('</p>', '\n')
         soup = BeautifulSoup(html, "html.parser")
         # 不知道为什么 soup print 出来是断掉的，但是可用
         # data-contestid 网页源代码 i 是大写，这里是小写，服了
@@ -78,13 +101,14 @@ class CodeforcesHunter(ContestHunter):
         
         return result
 
+# AtCoder
 class AtcoderHunter(ContestHunter):
     url = "https://atcoder.jp/contests/"
     platform = "atcoder"
 
     def hunt(self):
         result = []
-        html = self.get_html_text(self.url).replace('<br />', '\n').replace('</p>', '\n')
+        html = self.page_crawler.crawl(self.url).replace('<br />', '\n').replace('</p>', '\n')
         soup = BeautifulSoup(html, "html.parser")
 
         contest_table = soup.find("div", attrs={"id": "contest-table-upcoming"})
@@ -126,13 +150,14 @@ class AtcoderHunter(ContestHunter):
 
         return result
 
+# AcWing
 class AcwingHunter(ContestHunter):
     url = "https://www.acwing.com/activity/1/competition/"
     platform = "acwing"
 
     def hunt(self):
         result = []
-        html = self.get_html_text(self.url).replace('<br />', '\n').replace('</p>', '\n')
+        html = self.page_crawler.crawl(self.url).replace('<br />', '\n').replace('</p>', '\n')
         soup = BeautifulSoup(html, "html.parser")
 
         for contest in soup.find_all("div", attrs={"class": "activity-index-block"}):
@@ -159,6 +184,7 @@ class AcwingHunter(ContestHunter):
 
         return result
 
+# NowCoder
 class NowCoderHunter(ContestHunter):
     url = "https://ac.nowcoder.com/acm/contest/vip-index?topCategoryFilter="
     url_1 = url + "13"
@@ -168,7 +194,7 @@ class NowCoderHunter(ContestHunter):
 
     def hunt_page(self, url: str) -> list:
         result: list[dict[str, str]] = []
-        html = self.get_html_text(url=url).replace('<br />', '\n').replace('</p>', '\n')
+        html = self.page_crawler.crawl(url=url).replace('<br />', '\n').replace('</p>', '\n')
         soup = BeautifulSoup(html, "html.parser")
 
         for contest_tag in soup.find_all("div", attrs={"class": "platform-item-cont"}):
@@ -183,7 +209,7 @@ class NowCoderHunter(ContestHunter):
             contest_time_tag = contest_tag.find("li", attrs={"class": "match-time-icon"})
 
             contest_time_str = contest_time_tag.string.split("(")[0]
-            print(contest_time_str.lstrip("比赛时间： ").split(" 至 "))
+            # print(contest_time_str.lstrip("比赛时间： ").split(" 至 "))
             start_time, end_time = map(lambda x: datetime.strptime(x.strip(), "%Y-%m-%d %H:%M"), 
                                        contest_time_str.lstrip("比赛时间： ").split(" 至 "))
             contest_info["time"] = str(start_time)
@@ -201,14 +227,65 @@ class NowCoderHunter(ContestHunter):
         result.extend(self.hunt_page(self.url_1))
         result.extend(self.hunt_page(self.url_2))
         return result
-        
+
+# Luogu
+class LuoguContestHunter(ContestHunter):
+    url = "https://www.luogu.com.cn/contest/list"
+    platform = "luogu"
+
+    def hunt(self) -> list:
+        result: list[dict[str, str]] = []
+        html = self.page_crawler.crawl(url=self.url).replace('<br />', '\n').replace('</p>', '\n')
+        soup = BeautifulSoup(html, "html.parser")
+
+        for contest_tag in soup.find_all("div", attrs={"data-v-3ae85f6d": True, 
+                                                       "data-v-24f898d2": True}):
+            
+            status_tag = contest_tag.find("span", attrs={"class": "status"})
+            # 已结束
+            if status_tag is None or status_tag.string.strip() == "已结束":
+                continue
+            
+            # print(status_tag)
+            contest_info = {}
+
+            title_tag = contest_tag.find("a", attrs={"target": "_blank"})
+            contest_info["title"] = title_tag.string.strip()
+
+            time_tag = contest_tag.find("span", attrs={"class": "time"})
+            # print(time_tag)
+            time_tags = time_tag.find_all("time")
+            # print(time_tags)
+
+            date_str, time_start_str = time_tags[0].string.split()
+            time_end_str = time_tags[1].string
+
+            date_str = str(datetime.now().year) + "-" + date_str
+
+            start_datetime = datetime.strptime(date_str + " " + time_start_str, "%Y-%m-%d %H:%M")
+            end_datetime =  datetime.strptime(date_str + " " + time_end_str, "%Y-%m-%d %H:%M")
+
+            # print(start_datetime)
+            # print(end_datetime)
+
+            contest_info["time"] = str(start_datetime)
+            contest_info["length"] = str(end_datetime-start_datetime)
+
+            contest_info["platform"] = self.platform
+
+            result.append(contest_info)
+
+        return result
+
+
 # 由爬取网站对象组成的字典（更新程序调用 hunt() 方法获取信息）
 # 加入网站后在字典中加入相应的键值对
 contest_hunter_dict = {
-    "codeforces": CodeforcesHunter(),
-    "atcoder": AtcoderHunter(),
-    "acwing": AcwingHunter(),
-    "nowcoder": NowCoderHunter(),
+    "codeforces": CodeforcesHunter(RequestsPageCrawler()),
+    "atcoder": AtcoderHunter(RequestsPageCrawler()),
+    "acwing": AcwingHunter(RequestsPageCrawler()),
+    "nowcoder": NowCoderHunter(RequestsPageCrawler()),
+    "luogu": LuoguContestHunter(PlayWrightPageCrawler()),
 }
 
 def hunt_all() -> list | None:
@@ -231,3 +308,4 @@ if __name__ == "__main__":
         print(*results, sep='\n')
     else:
         print("failed")
+    # print(contest_hunter_dict["luogu"].hunt())
