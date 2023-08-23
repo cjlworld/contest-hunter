@@ -28,3 +28,63 @@
 
 - codechef
 - leetcode
+
+## Daily Report API
+### GET /daily-report
+
+获取最新的日报信息。
+
+**请求参数**
+
+无
+
+**响应**
+
+200 OK：成功获取日报信息
+```
+{
+  "status_code": "1",
+  "data": {
+    // 日报数据
+  }
+}
+```
+
+404 Not Found：当天没有日报信息
+```
+{
+  "status_code": "0",
+  "data": null
+}
+```
+
+## Contest by Day API
+### GET /contest-by-day
+获取指定日期的比赛信息。
+
+请求参数
+```
+{
+  "date": "yyyy-mm-dd"
+}
+```
+date (必需)：指定的日期，格式为 yyyy-mm-dd。
+
+**响应**
+
+200 OK：成功获取比赛信息
+```
+{
+  "status_code": "1",
+  "data": [
+    // 比赛信息列表
+  ]
+}
+```
+404 Not Found：指定日期没有比赛信息
+```
+{
+  "status_code": "0",
+  "data": null
+}
+```
