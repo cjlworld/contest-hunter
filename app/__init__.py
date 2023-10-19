@@ -28,6 +28,9 @@ def create_app(config):
 
     """ 初始化扩展 """
     scheduler.init_app(app)
+    # 别忘了 start
+    scheduler.start()
+
     db.init_app(app)
     cors.init_app(app, resources=['/daily-report', '/contest-by-day'], origins=['*'])
 
