@@ -5,10 +5,21 @@
 from flask import Flask
 
 """" 实例化扩展 """
-from flask_apscheduler import APScheduler
+from flask_apscheduler import APScheduler # as _BaseAPScheduler
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 
+# """
+#     封装 APScheduler, 给每个定时任务加上上下文
+# """
+# class APScheduler(_BaseAPScheduler):
+#     def run_job(self, id, jobstore=None):
+#         with self.app.app_context():
+#             super().run_job(id=id, jobstore=jobstore)
+
+"""
+    A single-mode
+"""
 scheduler = APScheduler()
 db = SQLAlchemy()
 cors = CORS()
@@ -19,7 +30,7 @@ def create_app(config):
 
     """ 注册 BluePrint """
     from .api_bp import api_bp
-    app.register_blueprint(api_bp, url_prefix = "/")
+    app.register_blueprint(api_bp, url_prefix="/")
 
     """ 获得 config, 之后可以把 config 变成 config.py"""
 
@@ -35,7 +46,6 @@ def create_app(config):
     cors.init_app(app, resources=['/daily-report', '/contest-by-day'], origins=['*'])
 
     """ 初始化表 """
-    from .models import Contest
     with app.app_context():
         db.create_all()
 
