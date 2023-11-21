@@ -3,4 +3,5 @@
 __pycache__/
 *.sqlite
 *.bat
+.vscode/
 .mypy_cache/
